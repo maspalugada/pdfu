@@ -1,5 +1,15 @@
 const editor = document.getElementById('editor');
 const saveButton = document.getElementById('save-button');
+const openButton = document.getElementById('open-button');
+
+openButton.addEventListener('click', async () => {
+  const result = await window.electronAPI.openPdf();
+  if (result.success) {
+    editor.value = result.text;
+  } else if (result.error) {
+    alert(`Gagal membuka PDF: ${result.error}`);
+  }
+});
 
 saveButton.addEventListener('click', async () => {
   const textContent = editor.value;

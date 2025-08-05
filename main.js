@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const pdfParse = require('pdf-parse');
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -65,4 +66,25 @@ ipcMain.handle('save-pdf', async (event, textContent) => {
     }
   }
   return { success: false, path: null };
+});
+
+ipcMain.handle('open-pdf', async () => {
+  const { filePaths } = await dialog.showOpenDialog({
+    title: 'Buka PDF',
+    properties: ['openFile'],
+    filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
+  });
+
+  if (filePaths && filePaths.length > 0) {
+    const filePath = filePaths[0];
+    try {
+      const dataBuffer = fs.readFileSync(filePath);
+      const data = await pdfParse(dataBuffer);
+      return { success: true, text: data.text };
+    } catch (error) {
+      console.error('Gagal membuka atau membaca PDF:', error);
+      return { success: false, error: error.message };
+    }
+  }
+  return { success: false };
 });
