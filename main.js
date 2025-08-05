@@ -88,3 +88,41 @@ ipcMain.handle('open-pdf', async () => {
   }
   return { success: false };
 });
+
+ipcMain.handle('merge-pdfs', async () => {
+  const { filePaths } = await dialog.showOpenDialog({
+    title: 'Pilih PDF untuk Digabungkan',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
+  });
+
+  if (!filePaths || filePaths.length < 2) {
+    return { success: false, message: 'Pilih setidaknya dua file PDF untuk digabungkan.' };
+  }
+
+  try {
+    const mergedPdf = await PDFDocument.create();
+    for (const filePath of filePaths) {
+      const pdfBytes = fs.readFileSync(filePath);
+      const pdfDoc = await PDFDocument.load(pdfBytes);
+      const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+      copiedPages.forEach((page) => mergedPdf.addPage(page));
+    }
+
+    const { filePath: savePath } = await dialog.showSaveDialog({
+      title: 'Simpan PDF Gabungan',
+      defaultPath: `gabungan-${Date.now()}.pdf`,
+      filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
+    });
+
+    if (savePath) {
+      const mergedPdfBytes = await mergedPdf.save();
+      fs.writeFileSync(savePath, mergedPdfBytes);
+      return { success: true, path: savePath };
+    }
+    return { success: false, message: 'Penyimpanan dibatalkan.' };
+  } catch (error) {
+    console.error('Gagal menggabungkan PDF:', error);
+    return { success: false, error: error.message };
+  }
+});
